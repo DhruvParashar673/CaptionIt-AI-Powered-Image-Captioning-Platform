@@ -1,0 +1,96 @@
+@startuml ViT-T5 Architecture
+
+' Direction - standard transformer diagrams are vertical
+top to bottom direction
+
+' Reduce padding to make diagram more compact
+skinparam padding 2
+skinparam componentPadding 5
+skinparam defaultTextAlignment center
+
+' Color scheme for transformer diagrams
+skinparam backgroundColor white
+skinparam roundCorner 5
+skinparam componentStyle rectangle
+skinparam handwritten false
+
+' Color palette inspired by classic transformer diagrams
+skinparam component {
+  BackgroundColor<<Encoder>> #D0E0FC
+  BorderColor<<Encoder>> #4A6FE3
+  FontColor<<Encoder>> #333333
+  
+  BackgroundColor<<Decoder>> #D4EDDA
+  BorderColor<<Decoder>> #28A745
+  FontColor<<Decoder>> #333333
+  
+  BackgroundColor<<Input>> #FEE8D6
+  BorderColor<<Input>> #ED8936
+  FontColor<<Input>> #333333
+  
+  BackgroundColor<<Output>> #FBD5D5
+  BorderColor<<Output>> #E53E3E
+  FontColor<<Output>> #333333
+}
+
+title <font color=#333333 size=16><b>ViT-T5 Transformer Architecture</b></font>
+
+' === COMBINED INPUT/ENCODER SECTION ===
+rectangle "Input & Vision Transformer" as vitSection {
+  component "Image (pixel_values)" as img <<Input>>
+  
+  rectangle "ViT" as vitEncoder <<Encoder>> {
+    component "Patch Embeddings Conv2d(3→768)" as patchEmb <<Encoder>>
+    
+    rectangle "ViT Layers (×12)" as vitLayers <<Encoder>> {
+      component "Self-Attention + FF (768→3072→768)" as vitAttnFF <<Encoder>>
+      component "LayerNorms" as vitLN <<Encoder>>
+    }
+    
+    component "Pooler (768→768)" as vitPool <<Encoder>>
+  }
+  
+  component "Projection (768→512)" as proj <<Input>>
+}
+
+' === COMBINED DECODER/OUTPUT SECTION ===
+rectangle "T5 Decoder & Output" as t5Section {
+  component "Embedding (32128, 512)" as t5Embed <<Decoder>>
+  
+  rectangle "T5 Blocks (×6)" as t5Blocks <<Decoder>> {
+    component "Self-Attention (512→512)" as t5SelfAttn <<Decoder>>
+    component "Cross-Attention (512→512)" as t5CrossAttn <<Decoder>>
+    component "FF (512→2048→512) + LN" as t5FFLN <<Decoder>>
+  }
+  
+  component "Final LN + LM Head (512→32128)" as t5Output <<Output>>
+  component "Generated Caption" as caption <<Output>>
+}
+
+' === CONNECTIONS ===
+' Main data flow (simplified)
+img -[#ED8936]-> patchEmb
+patchEmb -[#4A6FE3]-> vitLayers
+vitLayers -[#4A6FE3]-> vitPool
+vitPool -[#4A6FE3]-> proj
+proj -[#28A745]-> t5Embed
+t5Embed -[#28A745]-> t5Blocks
+t5Blocks -[#28A745]-> t5Output
+t5Output -[#E53E3E]-> caption
+
+' Internal connections (simplified)
+vitLN -[#4A6FE3,dashed]-> vitAttnFF
+t5SelfAttn -[#28A745,dashed]-> t5CrossAttn
+t5CrossAttn -[#28A745,dashed]-> t5FFLN
+
+' Cross-model attention
+vitPool ..[#6A5ACD]> t5CrossAttn : "Cross-Attention"
+
+legend right
+  <b>Components</b>
+  |= Section |= Purpose |
+  | <back:#D0E0FC> ViT </back> | Visual features |
+  | <back:#D4EDDA> T5 </back> | Text generation |
+endlegend
+
+@enduml

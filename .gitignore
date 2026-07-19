@@ -1,0 +1,10 @@
+.venv
+.vscode/
+.DS_Store
+# Ignore dependencies
+front-end/node_modules/
+.env__pycache__/
+.env
+.env.local
+
+
