@@ -1,0 +1,34 @@
+# render.yaml - Infrastructure as Code for Render deployment
+databases:
+  - name: captionit-db
+    plan: free
+    databaseName: captionit
+    user: captionit
+
+services:
+  - type: web
+    name: captionit-backend
+    runtime: python
+    plan: free
+    rootDir: caption_backend
+    buildCommand: "./build.sh"
+    startCommand: "gunicorn caption_backend.wsgi:application --bind 0.0.0.0:$PORT"
+    envVars:
+      - key: DEBUG
+        value: "False"
+      - key: SECRET_KEY
+        generateValue: true
+      - key: PYTHON_VERSION
+        value: "3.11.0"
+      - key: GROQ_API_KEY
+        sync: false  # Must be set manually in Render dashboard
+      - key: HF_API_URL
+        value: "https://rishabh2234-image-captionator.hf.space/generate_caption/"
+      - key: FRONTEND_URL
+        sync: false  # Set to your Vercel URL after frontend deployment
+      - key: ALLOWED_HOSTS
+        sync: false  # Set to your Render backend hostname
+      - key: DATABASE_URL
+        fromDatabase:
+          name: captionit-db
+          property: connectionString

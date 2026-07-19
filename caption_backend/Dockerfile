@@ -11,8 +11,11 @@ RUN pip install --no-cache-dir -r requirements.txt
 # copy the rest of the backend code
 COPY . /app/
 
+# collect static files
+RUN python manage.py collectstatic --noinput
+
 # expose Django port
 EXPOSE 8000
 
-# run Django on 0.0.0.0 so it's accessible outside the container
-CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+# run with gunicorn for production
+CMD ["gunicorn", "caption_backend.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "2"]

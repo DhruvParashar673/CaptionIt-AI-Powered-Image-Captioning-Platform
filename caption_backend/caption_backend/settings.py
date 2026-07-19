@@ -19,7 +19,7 @@ load_dotenv(dotenv_path=BASE_DIR / ".env")
 # SECURITY WARNING: keep the secret key used in production secret!
 DEBUG = os.getenv("DEBUG", "False").lower() in ("true", "1", "t")
 SECRET_KEY = os.getenv("SECRET_KEY", "fallback-secret-key")
-ALLOWED_HOSTS = ["*"]
+ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "*").split(",")
 # Application definition
 
 INSTALLED_APPS = [
@@ -56,6 +56,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -163,25 +164,31 @@ USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# CORS settings
-CORS_ALLOWED_ORIGINS = [
-    "https://captionit-gray.vercel.app",
+# Site settings
+SITE_ID = int(os.getenv("SITE_ID", 1))
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
+
+# CORS settings — dynamically includes FRONTEND_URL
+_cors_origins = [
     "http://localhost:3000",
     "http://localhost:3001",
 ]
+if FRONTEND_URL and FRONTEND_URL not in _cors_origins:
+    _cors_origins.append(FRONTEND_URL)
+
+CORS_ALLOWED_ORIGINS = _cors_origins
 CORS_ALLOW_ALL_ORIGINS = DEBUG  # Allow all origins in development
 CORS_ALLOW_CREDENTIALS = True
 CORS_EXPOSE_HEADERS = ['Content-Type', 'X-CSRFToken']
 CORS_ALLOW_METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS']
+
 # CSRF settings
-CSRF_TRUSTED_ORIGINS = [
-    "https://captionit-gray.vercel.app",
-    "http://localhost:3000",
-    "http://localhost:3001",
-]
+CSRF_TRUSTED_ORIGINS = _cors_origins.copy()
 CSRF_COOKIE_SAMESITE = 'Lax'  # Use 'Lax' for development, 'None' only for production with HTTPS
 CSRF_COOKIE_SECURE = False    # Set to True ONLY if using HTTPS, which is not typical in dev
 SESSION_COOKIE_SAMESITE = 'Lax'  
@@ -194,9 +201,6 @@ if not DEBUG:  # In production
     SESSION_COOKIE_SAMESITE = 'None'
     SESSION_COOKIE_SECURE = True
 
-# Site settings
-SITE_ID = int(os.getenv("SITE_ID", 1))
-FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
 
 # Authentication backends
 AUTHENTICATION_BACKENDS = [
